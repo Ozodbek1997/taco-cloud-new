@@ -1,50 +1,49 @@
 package tacos;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.hateoas.server.EntityLinks;
 
-import java.util.Arrays;
-import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import tacos.repo.TacoRepository;
 
-import static tacos.Ingredient.*;
+import java.util.Optional;
 
-@Controller
-@RequestMapping("/design")
+
+@RestController
+@RequestMapping(path = "/design", produces = "application/json")
 @Slf4j
+@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class DesignTacoCloudController {
 
-    @GetMapping
-    public String showDesignForm(Model model){
-        List<Ingredient> ingredients = Arrays.asList(
-                new Ingredient("FLTO","Flour Tortilla", Type.WRAP),
-                new Ingredient("COTO", "Corn Tortilla", Type.WRAP),
-                new Ingredient("GRBF", "Ground Beef", Type.PROTEIN),
-                new Ingredient("CARN", "Carnitas", Type.PROTEIN),
-                new Ingredient("TMTO", "Diced Tomatoes", Type.VEGGIES),
-                new Ingredient("LETC", "Lettuce", Type.VEGGIES),
-                new Ingredient("CHED", "Cheddar", Type.CHEESE),
-                new Ingredient("JACK", "Monterrey Jack", Type.CHEESE),
-                new Ingredient("SLSA", "Salsa", Type.SAUCE),
-                new Ingredient("SRCR", "Sour Cream", Type.SAUCE)
-        );
-        Type[] types = Ingredient.Type.values();
-        for (Type type:types){
-            model.addAttribute(type.toString().toLowerCase(),filterByType(ingredients,type));
-        }
+    private final TacoRepository tacoRepo;
 
-        model.addAttribute("design",new Taco());
-        return "design";
+
+    @Autowired
+    EntityLinks entityLinks;
+
+    @GetMapping("/recent")
+    public Iterable<Taco> recentTacos() {
+        PageRequest pageRequest = PageRequest.of(0, 12, Sort.by("createdAt").descending());
+
+        return tacoRepo.findAll(pageRequest).getContent();
     }
 
-    @PostMapping
-    public String processDesign(Design design){
-//        Save taco design
-//        We will do this in chapter 3
-        return "redirect:/orders/current";
+
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Taco> tacoById(@PathVariable("id") Long id) {
+        Optional<Taco> optionalTaco = tacoRepo.findById(id);
+        if (optionalTaco.isPresent())
+            return new ResponseEntity<>(optionalTaco.get(), HttpStatus.OK);
+
+        return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
 }
